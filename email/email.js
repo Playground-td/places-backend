@@ -31,10 +31,10 @@ class Email {
     }
   }
 
-  async sendWelcome(username) {
+  async sendWelcome(name) {
     const html = pug.renderFile(path.join(__dirname, "/views/welcome.pug"), {
       subject: this.subject,
-      userName: username,
+      fullName: name,
     });
     await this.sendHtml(html, "Welcome to Docease");
   }
