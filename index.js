@@ -18,6 +18,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const signAccessToken = (key) => {
+  const jwtSecret = "wzPe7g19Yan27T2ATud1Kw==";
+  return jwt.sign({ key: key }, jwtSecret, {
+    expiresIn: "3h",
+  });
+};
+
 app.post("/clients/new", async (req, res) => {
   const { email, password } = req.body;
 
