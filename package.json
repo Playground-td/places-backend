@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "nodemon index.js",
+    "dev": "env-cmd nodemon index.js",
+    "repl": "env-cmd node"
   },
   "repository": {
     "type": "git",
@@ -18,12 +20,18 @@
   },
   "homepage": "https://github.com/Tibz-Dankan/near-by-places#readme",
   "dependencies": {
+    "@cyclic.sh/dynamodb": "^0.0.35",
     "@googlemaps/google-maps-services-js": "^3.3.41",
     "@sendgrid/mail": "^7.7.0",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "env-cmd": "^10.1.0",
     "express": "^4.18.2",
-    "nodemon": "^3.0.1",
+    "jsonwebtoken": "^9.0.2",
     "pug": "^3.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }

@@ -4,6 +4,10 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const { createHash, randomBytes } = require("crypto");
 const { Email } = require("./email/email");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const CyclicDB = require("@cyclic.sh/dynamodb");
+const db = CyclicDB("dull-lime-cod-robeCyclicDB");
 
 dotenv.config();
 
@@ -11,6 +15,42 @@ const app = express();
 const client = new Client({});
 
 app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.post("/clients/new", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Check if the user exists
+    const client = await db.collection("doceaseclients").get(email);
+
+    // If the user exists, return a message
+    if (client) {
+      res.status(400).json({ success: false, message: "User already exists." });
+      return;
+    }
+
+    const saltRounds = 12;
+    // Hash the password before storing
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Replace the plain password with the hashed version
+    req.body.password = hashedPassword;
+
+    // Store the user in the database
+    const result = await db.collection("doceaseclients").set(email, req.body);
+    console.log(JSON.stringify(result, null, 2));
+    res.json({
+      success: true,
+      message: "User added successfully.",
+      data: { added: true },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+});
 
 app.get("/near-by-places", async (req, res) => {
   console.log("req.query");
@@ -48,33 +88,23 @@ app.get("/near-by-places", async (req, res) => {
     data: healthFacilities.data,
   });
 });
-
-app.post("/users/forgot-password/:email", async (req, res) => {
+app.post("/users/forgot-password", async (req, res) => {
   try {
-    console.log("req.body");
-    console.log(req.body);
-    console.log("req.params");
-    console.log(req.params);
-    console.log("req.query");
-    console.log(req.query);
-
-    // const email = req.body.email;
-    // const { email } = req.body;
-    const { email } = req.params;
+    const email = req.body.email;
 
     if (!email) {
       return res
         .status(200)
         .json({ success: false, message: "Please provide email" });
     }
-    // const user = await db.collection("doceaseclients").get(email);
+    const user = await db.collection("doceaseclients").get(email);
 
-    // if (!user) {
-    //   return res.status(200).json({
-    //     success: false,
-    //     message: "There is no user with supplied email",
-    //   });
-    // }
+    if (!user) {
+      return res.status(200).json({
+        success: false,
+        message: "There is no user with supplied email",
+      });
+    }
     const resetToken = randomBytes(32).toString("hex");
 
     const passwordResetToken = createHash("sha256")
@@ -84,23 +114,23 @@ app.post("/users/forgot-password/:email", async (req, res) => {
       Date.now() + 20 * 60 * 1000
     ).toISOString();
 
-    // const params = {
-    //   passwordResetToken: passwordResetToken,
-    //   passwordResetExpires: passwordResetExpires,
-    // };
-    // // save passwordResetToken and passwordResetExpires in dynamodb
-    // const result = await db.collection("doceaseclients").set(email, params); //To confirm
+    const params = {
+      passwordResetToken: passwordResetToken,
+      passwordResetExpires: passwordResetExpires,
+    };
+    // save passwordResetToken and passwordResetExpires in database
+    const result = await db.collection("doceaseclients").set(email, params); //To confirm
 
-    const resetURL = `${req.protocol}://localhost:5173/reset-password/${resetToken}`;
-    // const resetURL = `${req.protocol}://docease.netlify.app/reset-password/${resetToken}`;
+    // const resetURL = `${req.protocol}://localhost:5173/reset-password/${resetToken}`;
+    const resetURL = `${req.protocol}://docease.netlify.app/reset-password/${resetToken}`;
     const subject = "Reset Password";
 
     console.log("resetURL");
     console.log(resetURL);
 
-    // const fullName = user.props.userName;
+    const fullName = user.props.fullName;
 
-    await new Email(email, subject).sendPasswordReset(resetURL, "Tibs");
+    await new Email(email, subject).sendPasswordReset(resetURL, fullName);
 
     res.status(200).json({
       status: "success",
@@ -112,36 +142,87 @@ app.post("/users/forgot-password/:email", async (req, res) => {
   }
 });
 
-app.post("users/reset-password/:token", async (req, res, next) => {
-  const token = req.params.token;
-  if (!token) return next(new AppError("Please a reset token", 400));
-  const hashedToken = createHash("sha256").update(token).digest("hex");
-  // compare reset token
-  // check for token expiry
+app.post("/users/reset-password/:token", async (req, res) => {
+  try {
+    const token = req.params.token;
 
-  const user = await User.findOne({
-    where: {
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { [Op.gt]: Date.now() },
-    },
-  });
+    if (!token)
+      return res.status(400).json({
+        success: false,
+        message: "Please provide the reset token",
+      });
+    const hashedToken = createHash("sha256").update(token).digest("hex");
 
-  if (!user) {
-    return next(new AppError("Token is invalid or has expired", 400));
+    const user = await db.collection("doceaseclients").get(hashedToken);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Password reset token is invalid",
+      });
+    }
+
+    const passwordResetExpiry = new Date(user.props.passwordResetExpires);
+    const currentDate = new Date();
+
+    if (passwordResetExpiry < currentDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Token  has expired",
+      });
+    }
+    const newPassword = req.body.password;
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide password",
+      });
+    }
+
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    const params = {
+      passwordResetToken: null,
+      passwordResetExpires: null,
+      password: hashedPassword,
+    };
+
+    const email = user.props.email;
+    await db.collection("doceaseclients").set(email, params); //To confirm
+
+    res
+      .status(200)
+      .json({ success: true, message: "password reset successful" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
-  const newPassword = req.body.password;
-  if (!newPassword) return next(new AppError("Please supply  password", 400));
+});
 
-  user.password = req.body.password;
-  user.passwordResetToken = undefined;
-  user.passwordResetExpires = undefined;
-  await user.save();
-  // delete token and its expiry dates from dynamodb
+app.get("/:col/:key", async (req, res) => {
+  // getting a key from a collection
+  const col = req.params.col;
+  const key = req.params.key;
+  console.log(
+    `from collection: ${col} get key: ${key} with params ${JSON.stringify(
+      req.params
+    )}`
+  );
+  const item = await db.collection(col).get(key);
+  console.log(JSON.stringify(item, null, 2));
+  res.json(item).end();
+});
 
-  // login user
-
-  await new Auth(user, 200, res).send();
-  // send response here
+app.get("/:col", async (req, res) => {
+  // listing a collection
+  const col = req.params.col;
+  console.log(
+    `list collection: ${col} with params: ${JSON.stringify(req.params)}`
+  );
+  const items = await db.collection(col).list();
+  console.log(JSON.stringify(items, null, 2));
+  res.json(items).end();
 });
 
 const PORT = 5000 || process.env.PORT;
