@@ -197,6 +197,8 @@ app.post("/users/reset-password/:token", async (req, res) => {
       });
     const hashedToken = createHash("sha256").update(token).digest("hex");
 
+    console.log("hashedToken resetToken ", hashedToken);
+
     const user = await db.collection("doceaseclients").get(hashedToken);
 
     if (!user) {
