@@ -6,8 +6,8 @@ const { createHash, randomBytes } = require("crypto");
 const { Email } = require("./email/email");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const CyclicDB = require("@cyclic.sh/dynamodb");
-const db = CyclicDB("dull-lime-cod-robeCyclicDB");
+const CyclicDb = require("@cyclic.sh/dynamodb");
+const db = CyclicDb("successful-ant-zipperCyclicDB");
 
 dotenv.config();
 
