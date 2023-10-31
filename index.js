@@ -52,6 +52,43 @@ app.post("/clients/new", async (req, res) => {
   }
 });
 
+app.post("/users/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Fetching the client with the provided email
+    const client = await db.collection("doceaseclients").get(email);
+    if (client) {
+      const passwordMatch = await bcrypt.compare(
+        password,
+        client.props.password
+      );
+      if (!passwordMatch) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Invalid password entered." });
+      } else {
+        // return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+        const accessToken = signAccessToken(client.key);
+        return res.status(200).json({
+          success: true,
+          message: "Login successful.",
+          data: { client },
+          accessToken: accessToken,
+        });
+      }
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: `Email adress not found, if you don't have an account please sign up.`,
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+});
+
 app.get("/near-by-places", async (req, res) => {
   console.log("req.query");
   console.log(req.query);
