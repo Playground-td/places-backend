@@ -36,7 +36,7 @@ class Email {
       subject: this.subject,
       userName: username,
     });
-    await this.sendHtml(html, "Welcome to LetsChat ");
+    await this.sendHtml(html, "Welcome to Docease");
   }
 
   async sendPasswordReset(url, username) {
