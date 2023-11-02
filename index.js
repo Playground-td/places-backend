@@ -32,8 +32,6 @@ app.post("/clients/new", async (req, res) => {
     // Check if the user exists
     const client = await db.collection("doceaseclients").get(email);
 
-    await new Email(email, "Welcome").sendWelcome(req.body.fullName);
-
     // If the user exists, return a message
     if (client) {
       res.status(400).json({ success: false, message: "User already exists." });
@@ -51,7 +49,7 @@ app.post("/clients/new", async (req, res) => {
     const result = await db.collection("doceaseclients").set(email, req.body);
     console.log(JSON.stringify(result, null, 2));
 
-    // await new Email(email, "Welcome").sendWelcome(req.body.fullName);
+    await new Email(email, "Welcome").sendWelcome(req.body.fullName);
 
     res.json({
       success: true,
