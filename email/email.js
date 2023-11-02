@@ -36,7 +36,10 @@ class Email {
       subject: this.subject,
       fullName: name,
     });
-    await this.sendHtml(html, "Welcome to Docease");
+    await this.sendHtml(
+      html,
+      "Welcome to Docease - Your Guide to Nearby Hospitals and Health Facilities!"
+    );
   }
 
   async sendPasswordReset(url, username) {
