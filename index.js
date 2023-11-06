@@ -342,7 +342,10 @@ async function authorize(req, res, next) {
     token = authHeader.split(" ")[1];
   }
   if (!token) {
-    return next(new AppError("You are not logged! Please to get access"));
+    return res.status(401).json({
+      success: false,
+      message: "You are not logged! Please to get access",
+    });
   }
   const jwtSecret = "wzPe7g19Yan27T2ATud1Kw==";
 
@@ -351,7 +354,10 @@ async function authorize(req, res, next) {
   const user = await db.collection("doceaseclients").get(decoded.key);
 
   if (!user) {
-    return next(new AppError("The user belonging to this token no exists!"));
+    return res.status(404).json({
+      success: false,
+      message: "The user belonging to this token no exists!",
+    });
   }
 
   res.locals.key = decoded.key;
