@@ -364,6 +364,11 @@ async function authorize(req, res, next) {
   next();
 }
 
+app.get("/user/feedback", async (req, res) => {
+  const feedback = req.body.feedback;
+  console.log("feedback", feedback);
+});
+
 app.get("/:col/:key", async (req, res) => {
   // getting a key from a collection
   const col = req.params.col;
