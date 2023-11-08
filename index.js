@@ -372,39 +372,44 @@ app.post(
   authorize,
   uploadFile,
   async (req, res, next) => {
-    const file = req.file;
-    const key = res.locals.key;
-    if (file == undefined) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide your profile picture !",
+    try {
+      const file = req.file;
+      const key = res.locals.key;
+      if (file == undefined) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide your profile picture !",
+        });
+      }
+
+      const mimeType = mime.lookup(file.originalname);
+      const isImage = mimeType && mimeType.startsWith("image");
+      if (!isImage) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide file of image type !",
+        });
+      }
+
+      const imagePath = `users/${Date.now()}_${file.originalname}`;
+      const upload = await new Upload(imagePath, next).add(file);
+      const url = upload?.url;
+
+      const params = {
+        imageUrl: url,
+        imagePath: imagePath,
+      };
+
+      await db.collection("doceaseclients").set(key, params);
+
+      res.status(200).json({
+        status: "success",
+        message: `Photo uploaded successfully`,
       });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: error.message });
     }
-
-    const mimeType = mime.lookup(file.originalname);
-    const isImage = mimeType && mimeType.startsWith("image");
-    if (!isImage) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide file of image type !",
-      });
-    }
-
-    const imagePath = `users/${Date.now()}_${file.originalname}`;
-    const upload = await new Upload(imagePath, next).add(file);
-    const url = upload?.url;
-
-    const params = {
-      imageUrl: url,
-      imagePath: imagePath,
-    };
-
-    await db.collection("doceaseclients").set(key, params);
-
-    res.status(200).json({
-      status: "success",
-      message: `Photo uploaded successfully`,
-    });
   }
 );
 
