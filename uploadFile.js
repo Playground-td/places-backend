@@ -20,7 +20,7 @@ class Upload {
   upload;
   next;
 
-  constructor(filePath, next) {
+  constructor(filePath) {
     const firebaseConfig = {
       apiKey: process.env.API_KEY,
       authDomain: process.env.AUTH_DOMAIN,
@@ -34,7 +34,6 @@ class Upload {
     this.firebaseStorage = getStorage(firebaseApp);
     this.filePath = filePath;
     this.upload = { url: "" };
-    this.next = next;
   }
 
   bufferToBase64(buffer) {

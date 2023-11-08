@@ -367,52 +367,119 @@ async function authorize(req, res, next) {
   next();
 }
 
-app.post(
-  "/users/profile-picture",
-  authorize,
-  uploadFile,
-  async (req, res, next) => {
-    try {
-      const file = req.file;
-      const key = res.locals.key;
-      console.log("db key", key);
-      if (file == undefined) {
-        return res.status(400).json({
-          success: false,
-          message: "Please provide your profile picture !",
-        });
-      }
+app.post("/users/profile-picture", authorize, uploadFile, async (req, res) => {
+  try {
+    const file = req.file;
+    const key = res.locals.key;
 
-      const mimeType = mime.lookup(file.originalname);
-      const isImage = mimeType && mimeType.startsWith("image");
-      if (!isImage) {
-        return res.status(400).json({
-          success: false,
-          message: "Please provide file of image type !",
-        });
-      }
-
-      const imagePath = `users/${Date.now()}_${file.originalname}`;
-      const upload = await new Upload(imagePath, next).add(file);
-      const url = upload?.url;
-
-      const params = {
-        imageUrl: url,
-        imagePath: imagePath,
-      };
-
-      await db.collection("doceaseclients").set(key, params);
-
-      res.status(200).json({
-        status: "success",
-        message: `Photo uploaded successfully`,
+    if (file == undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide your profile picture !",
       });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ success: false, message: error.message });
     }
+
+    const mimeType = mime.lookup(file.originalname);
+    const isImage = mimeType && mimeType.startsWith("image");
+    if (!isImage) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide file of image type !",
+      });
+    }
+
+    const imagePath = `users/${Date.now()}_${file.originalname}`;
+    const upload = await new Upload(imagePath).add(file);
+    const url = upload?.url;
+
+    const params = {
+      imageUrl: url,
+      imagePath: imagePath,
+    };
+
+    await db.collection("doceaseclients").set(key, params);
+
+    const user = await db.collection("doceaseclients").get(key);
+
+    user.props.password = undefined;
+    if (user.props.passwordResetToken) {
+      user.props.passwordResetToken = undefined;
+    }
+    if (user.props.passwordResetExpires) {
+      user.props.passwordResetExpires = undefined;
+    }
+    user.props.imageUrl = url;
+
+    res.status(200).json({
+      status: "success",
+      message: `Photo uploaded successfully`,
+      data: {
+        user: user.props,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message });
   }
-);
+});
+
+app.patch("/users/profile-picture", authorize, uploadFile, async (req, res) => {
+  try {
+    const file = req.file;
+    const key = res.locals.key;
+    if (file == undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide your profile picture !",
+      });
+    }
+
+    const mimeType = mime.lookup(file.originalname);
+    const isImage = mimeType && mimeType.startsWith("image");
+    if (!isImage) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide file of image type !",
+      });
+    }
+
+    const user = await db.collection("doceaseclients").get(key);
+
+    const savedImagePath = user.props.imagePath;
+
+    const imagePath = `users/${Date.now()}_${file.originalname}`;
+    const upload = await new Upload(imagePath).update(file, savedImagePath);
+    const url = upload?.url;
+
+    const params = {
+      imageUrl: url,
+      imagePath: imagePath,
+    };
+
+    await db.collection("doceaseclients").set(key, params);
+
+    user.props.password = undefined;
+    if (user.props.passwordResetToken) {
+      user.props.passwordResetToken = undefined;
+    }
+    if (user.props.passwordResetExpires) {
+      user.props.passwordResetExpires = undefined;
+    }
+    user.props.imagePath = undefined;
+    user.props.imageUrl = url;
+
+    res.status(200).json({
+      status: "success",
+      message: `Photo uploaded successfully`,
+      data: {
+        user: user.props,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 app.get("/user/feedback", async (req, res) => {
   const feedback = req.body.feedback;
