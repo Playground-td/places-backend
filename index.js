@@ -375,6 +375,7 @@ app.post(
     try {
       const file = req.file;
       const key = res.locals.key;
+      console.log("db key", key);
       if (file == undefined) {
         return res.status(400).json({
           success: false,
