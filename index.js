@@ -402,12 +402,8 @@ app.post("/users/profile-picture", authorize, uploadFile, async (req, res) => {
     const user = await db.collection("doceaseclients").get(key);
 
     user.props.password = undefined;
-    if (user.props.passwordResetToken) {
-      user.props.passwordResetToken = undefined;
-    }
-    if (user.props.passwordResetExpires) {
-      user.props.passwordResetExpires = undefined;
-    }
+    user.props.passwordResetToken = undefined;
+    user.props.passwordResetExpires = undefined;
     user.props.imageUrl = url;
 
     res.status(200).json({
@@ -459,12 +455,8 @@ app.patch("/users/profile-picture", authorize, uploadFile, async (req, res) => {
     await db.collection("doceaseclients").set(key, params);
 
     user.props.password = undefined;
-    if (user.props.passwordResetToken) {
-      user.props.passwordResetToken = undefined;
-    }
-    if (user.props.passwordResetExpires) {
-      user.props.passwordResetExpires = undefined;
-    }
+    user.props.passwordResetToken = undefined;
+    user.props.passwordResetExpires = undefined;
     user.props.imagePath = undefined;
     user.props.imageUrl = url;
 
