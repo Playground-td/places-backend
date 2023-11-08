@@ -6,6 +6,9 @@ const { createHash, randomBytes } = require("crypto");
 const { Email } = require("./email/email");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const mime = require("mime-types");
+const { Upload, uploadFile } = require("./uploadFile");
+
 const CyclicDb = require("@cyclic.sh/dynamodb");
 const db = CyclicDb("successful-ant-zipperCyclicDB");
 
@@ -363,6 +366,47 @@ async function authorize(req, res, next) {
   res.locals.key = decoded.key;
   next();
 }
+
+app.post(
+  "users/profile-picture",
+  authorize,
+  uploadFile,
+  async (req, res, next) => {
+    const file = req.file;
+    const key = res.locals.key;
+    if (file == undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide your profile picture !",
+      });
+    }
+
+    const mimeType = mime.lookup(file.originalname);
+    const isImage = mimeType && mimeType.startsWith("image");
+    if (!isImage) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide file of image type !",
+      });
+    }
+
+    const imagePath = `users/${Date.now()}_${file.originalname}`;
+    const upload = await new Upload(imagePath, next).add(file);
+    const url = upload?.url;
+
+    const params = {
+      imageUrl: url,
+      imagePath: imagePath,
+    };
+
+    await db.collection("doceaseclients").set(key, params);
+
+    res.status(200).json({
+      status: "success",
+      message: `Photo uploaded successfully`,
+    });
+  }
+);
 
 app.get("/user/feedback", async (req, res) => {
   const feedback = req.body.feedback;
