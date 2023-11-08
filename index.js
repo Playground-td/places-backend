@@ -368,7 +368,7 @@ async function authorize(req, res, next) {
 }
 
 app.post(
-  "users/profile-picture",
+  "/users/profile-picture",
   authorize,
   uploadFile,
   async (req, res, next) => {
