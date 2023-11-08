@@ -404,6 +404,7 @@ app.post("/users/profile-picture", authorize, uploadFile, async (req, res) => {
     user.props.password = undefined;
     user.props.passwordResetToken = undefined;
     user.props.passwordResetExpires = undefined;
+    user.props.imagePath = undefined;
     user.props.imageUrl = url;
 
     res.status(200).json({
